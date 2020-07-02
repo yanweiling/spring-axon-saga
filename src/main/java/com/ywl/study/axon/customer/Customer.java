@@ -3,9 +3,11 @@ package com.ywl.study.axon.customer;
 import com.ywl.study.axon.customer.command.CustomerChargeCommand;
 import com.ywl.study.axon.customer.command.CustomerCreateCommand;
 import com.ywl.study.axon.customer.command.CustomerDepositCommand;
+import com.ywl.study.axon.customer.command.OrderPayCommand;
 import com.ywl.study.axon.customer.event.CustomerChargedEvent;
 import com.ywl.study.axon.customer.event.CustomerCreatedEvent;
 import com.ywl.study.axon.customer.event.CustomerDepositedEvent;
+import com.ywl.study.axon.customer.event.OrderPaidEvent;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -55,6 +57,17 @@ public class Customer {
 
     }
 
+
+    @CommandHandler
+    public void handle(OrderPayCommand command){
+        if(this.deposit>=command.getAmount()){
+            apply(new OrderPaidEvent(command.getCustomerId(),command.getOrderId(),command.getAmount()));
+        }else{
+            throw new IllegalArgumentException("余额不足");
+        }
+
+    }
+
     @EventSourcingHandler
     public void on(CustomerCreatedEvent event){
         this.customerId=event.getCustomerId();
@@ -72,6 +85,12 @@ public class Customer {
 
     @EventSourcingHandler
     public void on(CustomerChargedEvent event){
+        this.deposit=deposit-event.getAmount();
+        LOG.info("Executed event:{}",event);
+    }
+
+    @EventSourcingHandler
+    public void on(OrderPaidEvent event){
         this.deposit=deposit-event.getAmount();
         LOG.info("Executed event:{}",event);
     }

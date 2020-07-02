@@ -3,6 +3,7 @@ package com.ywl.study.axon.customer.query;
 import com.ywl.study.axon.customer.event.CustomerChargedEvent;
 import com.ywl.study.axon.customer.event.CustomerCreatedEvent;
 import com.ywl.study.axon.customer.event.CustomerDepositedEvent;
+import com.ywl.study.axon.customer.event.OrderPaidEvent;
 import org.axonframework.eventhandling.EventHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,15 @@ public class CustomerProjector {
 
     @EventHandler
     public void on(CustomerChargedEvent event){
+        String customerId=event.getCustomerId();
+        CustomerEntity accountView=repository.getOne(customerId);
+        Double newDeposit=accountView.getDeposit()-event.getAmount();
+        accountView.setDeposit(newDeposit);
+        repository.save(accountView);
+    }
+
+    @EventHandler
+    public void on(OrderPaidEvent event){
         String customerId=event.getCustomerId();
         CustomerEntity accountView=repository.getOne(customerId);
         Double newDeposit=accountView.getDeposit()-event.getAmount();
