@@ -8,6 +8,7 @@ import com.ywl.study.axon.customer.event.CustomerChargedEvent;
 import com.ywl.study.axon.customer.event.CustomerCreatedEvent;
 import com.ywl.study.axon.customer.event.CustomerDepositedEvent;
 import com.ywl.study.axon.customer.event.OrderPaidEvent;
+import com.ywl.study.axon.customer.event.OrderPayFailEvent;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -60,10 +61,13 @@ public class Customer {
 
     @CommandHandler
     public void handle(OrderPayCommand command){
-        if(this.deposit>=command.getAmount()){
+        if(command.getAmount()==0){
+            //do nothing saga流程遇到amount-0的是时候，在支付环节就不会往下走了，用来演示超时的情况
+        } else if(this.deposit>=command.getAmount()){
             apply(new OrderPaidEvent(command.getCustomerId(),command.getOrderId(),command.getAmount()));
         }else{
-            throw new IllegalArgumentException("余额不足");
+            apply(new OrderPayFailEvent(command.getOrderId(),"not enough"));
+//            throw new IllegalArgumentException("余额不足");
         }
 
     }

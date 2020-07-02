@@ -43,6 +43,7 @@ public class OrderProjector {
     public void on(OrderFailedEvent event){
         OrderEntity order=repository.getOne(event.getOrderId());
         order.setStatus("FAILED");
+        order.setReason(event.getReason());
         repository.save(order);
         LOG.info("Executed event:{}",event);
     }

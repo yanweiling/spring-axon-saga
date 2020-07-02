@@ -95,7 +95,7 @@ public class Ticket {
 
     @EventSourcingHandler
     public void on(OrderTicketPreserveFailEvent event){
-
+        this.lockUser=null;
         LOG.info("Execute event:{}",event);
     }
 
