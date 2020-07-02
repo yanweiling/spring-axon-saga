@@ -284,3 +284,172 @@ public class OrderManagementSaga {
     com.ywl.study.axon.order.event.OrderFinishedEvent
 
 每一次流程启动就会新建一个saga实例到表saga_entry中，当实例结束后，将将实例从saga_entry中删除
+
+---
+有的时候，因为程序设计问题，会导致物化视图和聚合对象中的数据不一致，如何解决呢？
+
+## 解决办法：
+
+**在开发阶段，我们如何查看聚合对象中的数据，验证聚合对象和物化视图的一致性问题---生产环境不建议直接查看聚合对象**
+
+**1.新增OrderId**
+
+```
+package com.ywl.study.axon.order.query;
+
+import org.axonframework.common.Assert;
+
+public class OrderId {
+    private final String identifier;
+    private final int hashCode;
+
+    public OrderId(String identifier){
+        Assert.notNull(identifier,()->"Identifier may not be null");
+        this.identifier=identifier;
+        this.hashCode=identifier.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o){
+        if(this==o) return true;
+        if(o==null || getClass()!=o.getClass()) return false;
+        OrderId customerId=(OrderId)o;
+        return identifier.equals(customerId.identifier);
+    }
+
+    @Override
+    public int hashCode(){
+        return hashCode;
+    }
+
+    @Override
+    public String toString(){
+        return identifier;
+    }
+
+}
+
+```
+**2.新增OrderQueryHandler**
+
+
+```
+package com.ywl.study.axon.order.query;
+
+import com.ywl.study.axon.order.Order;
+import org.axonframework.commandhandling.model.Repository;
+import org.axonframework.queryhandling.QueryHandler;
+import org.axonframework.spring.config.AxonConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+/**
+ * 为了查看聚合对象中的数据，验证和物化视图中的数据是否一致
+ * 正式环境下不建议使用，只限定在开发环境
+ */
+@Component
+public class OrderQueryHandler {
+    private static final Logger LOG= LoggerFactory.getLogger(OrderQueryHandler.class);
+
+    @Autowired
+    AxonConfiguration axonConfiguration;
+
+    @Autowired
+    private OrderEntityRepository orderEntityRepository;
+
+    /**
+     * 其实本来是要这样设计的
+     * @QueryHandler
+     * public Order query(String orderId){
+     *     ....
+     * }
+     * 我们预期是给orderId字符串绑定queryHandler的，但是由于orderId类型是String，
+     * 这样会遇到，假设我们传了String customerId,或者String ticketId也会绑定QueryHandler，
+     * 这样肯定不是我们需要的；
+     *
+     * 所以这里将String orderId转换成了OrderId,而，这个类中的属性identifier其实就是String orderId，
+     * 而其中的hashCode属性只是附加来实现equals方法的
+     *
+     */
+
+    /*evenSource不建议这么做*/
+    @QueryHandler
+    public Order query(OrderId orderId){
+        LOG.info("Query order info with:{}",orderId.toString());
+        final Order[] orders=new Order[1];
+        Repository<Order> repository=axonConfiguration.repository(Order.class);//根据聚合对象类型来获取
+        repository.load(orderId.toString()).execute(order -> {
+            orders[0]=order;
+        });
+      return orders[0];
+    }
+
+    /*一般是通过物化视图来查询的；
+    * 并且，同一个类型绑定的handler只能有一个，所以这里暂时注释掉其中一个*/
+
+//    @QueryHandler
+//    public OrderEntity queryByView(OrderId orderId){
+//        return orderEntityRepository.getOne(orderId.toString());
+//    }
+}
+
+```
+
+3.新增restful接口
+
+```
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+    
+    @Autowired
+    private QueryGateway queryGateway;
+    
+    @GetMapping("/query/{orderId}")
+    public CompletableFuture<Order> getRromRepo(@PathVariable String orderId){
+        LOG.info("Reqeust Order with:{}",orderId );
+        return queryGateway.query(new OrderId(orderId),Order.class);//由OrderId关联的QueryHandler处理
+    }
+}
+```
+
+
+ 
+axon默认都是用string序列化和反序列化的
+
+但是对于web的接口，一般都是用json进行序列化和反序列化的
+
+**4.更改axon序列化方式**
+
+```
+
+#axon默认都是用string序列化和反序列化的
+axon:
+  serializer:
+    general: jackson
+    messages: jackson
+    events: jackson
+
+```
+**5.引入依赖**
+
+```
+ <!--axon设置json序列化需要增加此依赖-->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+        <!--axon设置json序列化需要增加此依赖-->
+```
+**6.测试**
+
+```
+curl http://localhost:8080/orders/query/4cd98ab5-66e7-4688-a3f4-e7aca0005f0d
+{"orderId":"4cd98ab5-66e7-4688-a3f4-e7aca0005f0d","titile":"杞︾エ棰勮","ticketId":"036994ee-3a8a-4f51-85d8-bed05378b9a9","customerId":"2d076433-e98e-4ff0-92e3-a78169d4016b","amount":100.0,"reason":null,"
+createDate":"2020-07-02T06:21:06.742Z","status":"FINISHED"}
+
+```
+
+

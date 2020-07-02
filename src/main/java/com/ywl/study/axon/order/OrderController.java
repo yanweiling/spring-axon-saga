@@ -8,6 +8,7 @@ import com.ywl.study.axon.customer.query.CustomerEntityRepository;
 import com.ywl.study.axon.order.command.OrderCreateCommand;
 import com.ywl.study.axon.order.query.OrderEntity;
 import com.ywl.study.axon.order.query.OrderEntityRepository;
+import com.ywl.study.axon.order.query.OrderId;
 import org.axonframework.commandhandling.callbacks.LoggingCallback;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.queryhandling.QueryGateway;
@@ -55,6 +56,10 @@ public class OrderController {
         return repository.getOne(orderId);
     }
 
-
+    @GetMapping("/query/{orderId}")
+    public CompletableFuture<Order> getRromRepo(@PathVariable String orderId){
+        LOG.info("Reqeust Order with:{}",orderId );
+        return queryGateway.query(new OrderId(orderId),Order.class);//由OrderId关联的QueryHandler处理
+    }
 
 }

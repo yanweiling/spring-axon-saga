@@ -9,3 +9,9 @@ spring:
       ddl-auto: update
     show-sql: true
 
+#axon默认都是用string序列化和反序列化的
+axon:
+  serializer:
+    general: jackson
+    messages: jackson
+    events: jackson

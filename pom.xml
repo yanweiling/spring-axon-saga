@@ -32,6 +32,12 @@
             <artifactId>axon-spring-boot-starter</artifactId>
             <version>3.2</version>
         </dependency>
+        <!--axon设置json序列化需要增加此依赖-->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+        <!--axon设置json序列化需要增加此依赖-->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>

@@ -43,6 +43,10 @@ public class Order {
 
     private String status;
 
+    /**
+     * 根据command来注册handler
+     * @param command
+     */
     @CommandHandler
     public Order(OrderCreateCommand command){
        apply(new OrderCreatedEvent(command.getOrderId(),command.getTitile(),command.getTicketId(),command.getCustomerId(),command.getAmount(),ZonedDateTime.now()));
