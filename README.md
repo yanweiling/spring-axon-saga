@@ -285,6 +285,7 @@ public class OrderManagementSaga {
 
 每一次流程启动就会新建一个saga实例到表saga_entry中，当实例结束后，将将实例从saga_entry中删除
 
+
 ---
 有的时候，因为程序设计问题，会导致物化视图和聚合对象中的数据不一致，如何解决呢？
 
